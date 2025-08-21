@@ -7,7 +7,7 @@ let cars = [];
 let lights = [];
 const roadWidth = 100;
 const laneWidth = roadWidth / 2;
-const API_URL = 'http://127.0.0.1:8000';
+let API_URL = 'http://127.0.0.1:8000';
 let timeToNextChange = 0;
 let currentIntersection = 'main';
 
@@ -229,4 +229,25 @@ class Car {
       case 'west': return this.x < other.x;
     }
   }
+}
+
+function applyApiUrl() {
+  const v = document.getElementById('api-url').value.trim();
+  if (v) { API_URL = v; pingBackend(); }
+}
+
+async function pingBackend() {
+  const el = document.getElementById('backend-indicator');
+  try {
+    const res = await fetch(`${API_URL}/health`);
+    if (res.ok) el.textContent = 'Online'; else el.textContent = 'Unreachable';
+  } catch { el.textContent = 'Unreachable'; }
+}
+
+// Call on load after initial script setup
+window.addEventListener('load', pingBackend);
+
+// Optional: expose a quick reset
+async function resetIntersection() {
+  try { await fetch(`${API_URL}/reset?intersection=${currentIntersection}`, { method: 'POST' }); } catch {}
 }

@@ -4,7 +4,7 @@ import logging
 import time
 import threading
 import csv
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 from fastapi import FastAPI
@@ -158,6 +158,47 @@ def get_state_api(intersection: str = "main"):
         "lights": s["lights"],
         "time_to_next_change": max(0, int(time_to_next_change)),
     }
+
+# --- Simple health and help endpoints ---
+@app.get("/health")
+def health():
+    """Health check endpoint."""
+    return {"status": "ok"}
+
+@app.get("/help")
+def api_help():
+    """Describe how to use the API."""
+    return {
+        "title": "AI Traffic Light Control System API",
+        "endpoints": {
+            "POST /traffic": {
+                "query": "?intersection=main",
+                "body": {"north": "int", "south": "int", "east": "int", "west": "int"},
+                "desc": "Send current vehicle counts; triggers decision logic.",
+            },
+            "GET /state": {
+                "query": "?intersection=main",
+                "desc": "Get current lights and seconds until next change.",
+            },
+            "POST /reset": {
+                "query": "?intersection=main",
+                "desc": "Reset an intersection to defaults.",
+            },
+            "GET /health": {"desc": "Service status."},
+        },
+    }
+
+@app.post("/reset")
+def reset_intersection(intersection: str = "main"):
+    """Reset an intersection to default state."""
+    state[intersection] = {
+        "lights": {"vertical": "green", "horizontal": "red"},
+        "waiting_cars": {"north": 0, "south": 0, "east": 0, "west": 0},
+        "last_change_time": time.time(),
+        "is_changing": False,
+    }
+    save_state(state)
+    return {"message": f"Reset {intersection}"}
 
 # --- AI Logic ---
 def run_ai_logic(intersection: str = "main"):

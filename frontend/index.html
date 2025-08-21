@@ -8,6 +8,28 @@
 </head>
 <body>
   <h1>AI Traffic Control System</h1>
+
+  <section id="help">
+    <details open>
+      <summary><b>How to use</b></summary>
+      <ol>
+        <li>Start the backend (FastAPI) at http://127.0.0.1:8000.</li>
+        <li>Confirm Backend Status shows "Online" below.</li>
+        <li>In Manual Traffic Input, enter car counts for North/South/East/West.</li>
+        <li>Click "Update Traffic & Spawn Cars". Cars appear and the AI decides when to switch lights.</li>
+        <li>Watch lights and the timer. Stats update as cars pass.</li>
+      </ol>
+      <p>If your backend runs elsewhere, change the Backend URL and click Apply.</p>
+    </details>
+  </section>
+
+  <section id="backend">
+    <label for="api-url"><b>Backend URL:</b></label>
+    <input id="api-url" value="http://127.0.0.1:8000" size="28" />
+    <button onclick="applyApiUrl()">Apply</button>
+    <span id="backend-status">Status: <span id="backend-indicator">checking...</span></span>
+  </section>
+
   <div id="canvas-container"></div>
 
   <div id="controls">
