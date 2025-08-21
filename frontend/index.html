@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Traffic Control System</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>AI Traffic Control System</h1>
+  <div id="canvas-container"></div>
+
+  <div id="controls">
+    <h3>Manual Traffic Input</h3>
+    <form id="traffic-form">
+      <label for="north">North:</label>
+      <input type="number" id="north" name="north" min="0" value="5" />
+      <label for="south">South:</label>
+      <input type="number" id="south" name="south" min="0" value="4" />
+      <label for="east">East:</label>
+      <input type="number" id="east" name="east" min="0" value="8" />
+      <label for="west">West:</label>
+      <input type="number" id="west" name="west" min="0" value="6" />
+      <button type="submit">Update Traffic & Spawn Cars</button>
+    </form>
+  </div>
+
+  <div id="stats">
+    <h3>Traffic Statistics</h3>
+    <div id="stats-content"></div>
+  </div>
+
+  <div id="scenarios">
+    <h3>Simulate Scenario</h3>
+    <button onclick="simulateScenario('normal')">Normal</button>
+    <button onclick="simulateScenario('rush')">Rush Hour</button>
+    <button onclick="simulateScenario('accident')">Accident</button>
+  </div>
+
+  <div id="intersection-selector">
+    <h3>Select Intersection</h3>
+    <select id="intersection-select" onchange="switchIntersection()">
+      <option value="main">Main Intersection</option>
+      <option value="secondary">Secondary Intersection</option>
+    </select>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+  <script src="sketch.js"></script>
+</body>
+</html>

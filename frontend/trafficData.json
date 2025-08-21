@@ -1,0 +1,7 @@
+[
+  { "time": 0,  "north": 5, "south": 4, "east": 8, "west": 6 },
+  { "time": 10, "north": 2, "south": 3, "east": 4, "west": 5 },
+  { "time": 20, "north": 8, "south": 7, "east": 3, "west": 4 },
+  { "time": 30, "north": 4, "south": 5, "east": 6, "west": 7 },
+  { "time": 40, "north": 6, "south": 7, "east": 8, "west": 9 }
+]

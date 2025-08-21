@@ -1,0 +1,6 @@
+timestamp,intersection_id,vertical_waiting,horizontal_waiting,current_vertical_light,current_horizontal_light,action_taken,reward
+1755790769.380213,main,9,14,green,red,stay,0
+1755790770.24726,main,9,14,green,red,stay,0
+1755790791.373726,main,9,14,green,red,stay,0
+1755790792.9841046,main,9,14,green,red,stay,0
+1755790862.525509,main,9,14,green,red,stay,0
