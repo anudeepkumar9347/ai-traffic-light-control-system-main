@@ -5,12 +5,12 @@
             "horizontal": "red"
         },
         "waiting_cars": {
-            "north": 5,
-            "south": 4,
+            "north": 0,
+            "south": 0,
             "east": 8,
-            "west": 6
+            "west": 0
         },
-        "last_change_time": 0,
+        "last_change_time": 1756181598.6480734,
         "is_changing": false
     }
 }

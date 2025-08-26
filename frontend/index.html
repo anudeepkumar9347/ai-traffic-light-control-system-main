@@ -4,70 +4,124 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Traffic Control System</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <link rel="stylesheet" href="style.css?v=20250826" />
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="data:,">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+  <script defer src="sketch.js?v=20250826"></script>
+  <style>/* Minimal guard for unstyled flash */ body{opacity:0;transition:opacity .2s} </style>
+  <script>window.addEventListener('load',()=>document.body.style.opacity=1);</script>
+  
 </head>
 <body>
-  <h1>AI Traffic Control System</h1>
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">🚦</div>
+      <div class="title">AI Traffic Control</div>
+    </div>
+    <div class="backend-bar" id="backend">
+      <label for="api-url" class="sr-only">Backend URL</label>
+      <input id="api-url" value="http://127.0.0.1:8000" placeholder="Backend URL" />
+      <button class="btn" onclick="applyApiUrl()">Apply</button>
+      <span id="backend-status" class="status">Status: <span id="backend-indicator" class="chip chip-warn">checking...</span></span>
+    </div>
+  </header>
 
-  <section id="help">
-    <details open>
-      <summary><b>How to use</b></summary>
-      <ol>
-        <li>Start the backend (FastAPI) at http://127.0.0.1:8000.</li>
-        <li>Confirm Backend Status shows "Online" below.</li>
-        <li>In Manual Traffic Input, enter car counts for North/South/East/West.</li>
-        <li>Click "Update Traffic & Spawn Cars". Cars appear and the AI decides when to switch lights.</li>
-        <li>Watch lights and the timer. Stats update as cars pass.</li>
-      </ol>
-      <p>If your backend runs elsewhere, change the Backend URL and click Apply.</p>
-    </details>
-  </section>
+  <main class="app-main">
+    <aside class="side">
+      <section class="card" id="intersection-selector">
+        <div class="card-head">
+          <h3>Intersection</h3>
+        </div>
+        <div class="card-body">
+          <select id="intersection-select" onchange="switchIntersection()">
+            <option value="main">Main Intersection</option>
+            <option value="secondary">Secondary Intersection</option>
+          </select>
+          <button class="btn btn-ghost" onclick="resetIntersection()">Reset</button>
+        </div>
+      </section>
 
-  <section id="backend">
-    <label for="api-url"><b>Backend URL:</b></label>
-    <input id="api-url" value="http://127.0.0.1:8000" size="28" />
-    <button onclick="applyApiUrl()">Apply</button>
-    <span id="backend-status">Status: <span id="backend-indicator">checking...</span></span>
-  </section>
+      <section class="card" id="controls">
+        <div class="card-head">
+          <h3>Manual Traffic Input</h3>
+        </div>
+        <div class="card-body">
+          <form id="traffic-form" class="form-grid">
+            <label for="north">North</label>
+            <input type="number" id="north" name="north" min="0" value="5" />
+            <label for="south">South</label>
+            <input type="number" id="south" name="south" min="0" value="4" />
+            <label for="east">East</label>
+            <input type="number" id="east" name="east" min="0" value="8" />
+            <label for="west">West</label>
+            <input type="number" id="west" name="west" min="0" value="6" />
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Update Traffic & Spawn Cars</button>
+            </div>
+          </form>
+        </div>
+      </section>
 
-  <div id="canvas-container"></div>
+      <section class="card" id="scenarios">
+        <div class="card-head">
+          <h3>Scenarios</h3>
+        </div>
+        <div class="card-body row-gap">
+          <div class="btn-row">
+            <button class="btn btn-success" onclick="simulateScenario('normal')">Normal</button>
+            <button class="btn btn-accent" onclick="simulateScenario('rush')">Rush Hour</button>
+            <button class="btn btn-danger" onclick="simulateScenario('accident')">Accident</button>
+          </div>
+        </div>
+      </section>
 
-  <div id="controls">
-    <h3>Manual Traffic Input</h3>
-    <form id="traffic-form">
-      <label for="north">North:</label>
-      <input type="number" id="north" name="north" min="0" value="5" />
-      <label for="south">South:</label>
-      <input type="number" id="south" name="south" min="0" value="4" />
-      <label for="east">East:</label>
-      <input type="number" id="east" name="east" min="0" value="8" />
-      <label for="west">West:</label>
-      <input type="number" id="west" name="west" min="0" value="6" />
-      <button type="submit">Update Traffic & Spawn Cars</button>
-    </form>
-  </div>
+      <section class="card" id="stats">
+        <div class="card-head">
+          <h3>Live Metrics</h3>
+        </div>
+        <div class="card-body" id="stats-content">
+          <!-- Populated by JS -->
+        </div>
+      </section>
 
-  <div id="stats">
-    <h3>Traffic Statistics</h3>
-    <div id="stats-content"></div>
-  </div>
+      <section class="card" id="help">
+        <div class="card-head">
+          <h3>How to use</h3>
+        </div>
+        <div class="card-body">
+          <ol class="compact">
+            <li>Start backend at http://127.0.0.1:8000.</li>
+            <li>Ensure status is Online.</li>
+            <li>Enter counts and click Update to spawn cars.</li>
+            <li>Watch lights switch based on demand.</li>
+          </ol>
+        </div>
+      </section>
+    </aside>
 
-  <div id="scenarios">
-    <h3>Simulate Scenario</h3>
-    <button onclick="simulateScenario('normal')">Normal</button>
-    <button onclick="simulateScenario('rush')">Rush Hour</button>
-    <button onclick="simulateScenario('accident')">Accident</button>
-  </div>
+    <section class="stage">
+      <div class="card stage-card">
+        <div class="card-head space-between">
+          <h3>Intersection Simulation</h3>
+          <div class="timer">Next change in: <span id="timer-value">Live</span></div>
+        </div>
+        <div class="card-body stage-body">
+          <div id="canvas-container"></div>
+        </div>
+      </div>
+    </section>
+  </main>
 
-  <div id="intersection-selector">
-    <h3>Select Intersection</h3>
-    <select id="intersection-select" onchange="switchIntersection()">
-      <option value="main">Main Intersection</option>
-      <option value="secondary">Secondary Intersection</option>
-    </select>
-  </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-  <script src="sketch.js"></script>
+  <footer class="app-footer">
+    <div>Built for a near-realistic AI signal demo. Use Scenarios or manual inputs to stress the controller.</div>
+  </footer>
 </body>
 </html>

@@ -7,7 +7,7 @@ import csv
 from typing import Dict, Optional
 
 import numpy as np
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -67,6 +67,15 @@ class TrafficInput(BaseModel):
     east: int
     west: int
 
+class SensorInput(BaseModel):
+    north: Optional[int] = None
+    south: Optional[int] = None
+    east: Optional[int] = None
+    west: Optional[int] = None
+    arrivals: Optional[Dict[str, int]] = None
+    departures: Optional[Dict[str, int]] = None
+    occupancy: Optional[int] = None
+
 # --- Config ---
 def load_config():
     try:
@@ -82,6 +91,8 @@ def load_config():
 config = load_config()
 MIN_GREEN_TIME = config.get("MIN_GREEN_TIME", 15)
 YELLOW_TIME = config.get("YELLOW_TIME", 3)
+# Add a realistic all-red clearance interval between phase changes
+ALL_RED_TIME = config.get("ALL_RED_TIME", 2)
 
 # --- Persistent State ---
 def load_state():
@@ -110,6 +121,51 @@ def save_state(state):
 
 state = load_state()
 
+# --- New: Actuated controller with WS broadcast ---
+try:
+    from controller import ActuatedController, ControllerConfig
+except Exception:
+    ActuatedController = None  # type: ignore
+
+controller = None
+clients = set()
+
+async def controller_loop():
+    global controller
+    if ActuatedController is None:
+        return
+    cfg = ControllerConfig(
+        min_green=MIN_GREEN_TIME,
+        max_green=max(MIN_GREEN_TIME + 30, 120),
+        yellow=YELLOW_TIME,
+        all_red=ALL_RED_TIME,
+        gap_seconds=2.0,
+        queue_clear=True,
+    )
+    controller = ActuatedController(cfg)
+    # Prime queues from state if present
+    try:
+        await controller.update_sensor(state.get("main", {}).get("waiting_cars", {}))
+    except Exception:
+        pass
+    while True:
+        try:
+            await controller.tick()
+            snap = controller.snapshot()
+            # broadcast to WS clients
+            if clients:
+                dead = []
+                for ws in list(clients):
+                    try:
+                        await ws.send_json({"type": "state", "data": snap})
+                    except Exception:
+                        dead.append(ws)
+                for d in dead:
+                    clients.discard(d)
+        except Exception:
+            pass
+        await asyncio.sleep(0.1)
+
 # --- Logging traffic data for training ---
 def log_traffic_data(intersection_id, vertical_waiting, horizontal_waiting, current_vertical_light, current_horizontal_light, action_taken, reward):
     file_exists = os.path.isfile(TRAFFIC_LOG_FILE)
@@ -131,7 +187,7 @@ def log_traffic_data(intersection_id, vertical_waiting, horizontal_waiting, curr
 
 # --- API ---
 @app.post("/traffic")
-def update_traffic(data: TrafficInput, intersection: str = "main"):
+async def update_traffic(data: TrafficInput, intersection: str = "main"):
     if intersection not in state:
         state[intersection] = {
             "lights": {"vertical": "green", "horizontal": "red"},
@@ -140,12 +196,39 @@ def update_traffic(data: TrafficInput, intersection: str = "main"):
             "is_changing": False,
         }
     state[intersection]["waiting_cars"] = data.dict()
-    run_ai_logic(intersection)
+    # Legacy logic retained; new controller will consider these queues too
+    if not controller:
+        # Only use legacy logic if new controller is not active
+        run_ai_logic(intersection)
+    # Also feed the actuated controller immediately and set phase preference by bigger queue
+    try:
+        if controller:
+            ns_total = int(data.north) + int(data.south)
+            ew_total = int(data.east) + int(data.west)
+            preferred = "NS" if ns_total >= ew_total else "EW"
+            await controller.update_sensor(data.dict())
+            # Request preferred phase; controller will honor it when safe (after clearance)
+            try:
+                await controller.request_phase_preference(preferred)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+    except Exception:
+        pass
     save_state(state)
     return {"message": f"Traffic data updated for {intersection}"}
 
+@app.post("/sensor")
+async def sensor(data: SensorInput):
+    """Live sensor/arrival or queue counts from the frontend to feed the controller."""
+    if controller:
+        await controller.update_sensor(data.dict())
+    return {"ok": True}
+
 @app.get("/state")
 def get_state_api(intersection: str = "main"):
+    # Prefer the new controller snapshot if available
+    if controller:
+        return controller.snapshot()
     if intersection not in state:
         return {"error": "Intersection not found"}
     s = state[intersection]
@@ -242,6 +325,9 @@ def run_ai_logic(intersection: str = "main"):
 
 
 def start_light_change(intersection: str = "main"):
+    # Legacy function; ignore if new controller is active
+    if controller:
+        return
     s = state[intersection]
     if s["is_changing"]:
         return
@@ -256,11 +342,15 @@ def start_light_change(intersection: str = "main"):
             changing_direction = "horizontal"
         save_state(state)
         time.sleep(YELLOW_TIME)
+        # All-red clearance: both directions red briefly to clear the intersection
+        s["lights"]["vertical"] = "red"
+        s["lights"]["horizontal"] = "red"
+        save_state(state)
+        time.sleep(ALL_RED_TIME)
+        # Switch the right movement to green after clearance
         if changing_direction == "vertical":
-            s["lights"]["vertical"] = "red"
             s["lights"]["horizontal"] = "green"
         else:
-            s["lights"]["horizontal"] = "red"
             s["lights"]["vertical"] = "green"
         s["last_change_time"] = time.time()
         s["is_changing"] = False
@@ -270,4 +360,38 @@ def start_light_change(intersection: str = "main"):
 
 if __name__ == "__main__":
     import uvicorn
+    import asyncio as _asyncio
+    # Kick off controller loop in background when running directly
+    try:
+        loop = _asyncio.get_event_loop()
+        loop.create_task(controller_loop())
+    except RuntimeError:
+        pass
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+# ASGI startup event for controller when run under uvicorn/gunicorn
+import asyncio
+from contextlib import suppress
+
+@app.on_event("startup")
+async def _start_controller():
+    with suppress(Exception):
+        asyncio.create_task(controller_loop())
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    clients.add(websocket)
+    try:
+        # On connect, send a first snapshot if available
+        if controller:
+            await websocket.send_json({"type": "state", "data": controller.snapshot()})
+        while True:
+            # Optionally receive messages from client; ignore for now
+            msg = await websocket.receive_text()
+            # In future we could handle sensor updates via WS
+            _ = msg
+    except WebSocketDisconnect:
+        pass
+    finally:
+        clients.discard(websocket)

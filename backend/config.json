@@ -1,4 +1,5 @@
 {
   "MIN_GREEN_TIME": 15,
-  "YELLOW_TIME": 3
+  "YELLOW_TIME": 3,
+  "ALL_RED_TIME": 2
 }
