@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Logs & PIDs
+*.log
+logs/
+.server.log
+.server.pid
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Debug/test artifacts (frontend)
+frontend/*test*.html
+frontend/*debug*.html
+frontend/diagnostic.js

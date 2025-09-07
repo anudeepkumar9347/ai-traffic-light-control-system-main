@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Traffic Light Control System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="header">
+        <h1>🚦 AI Traffic Light Control System</h1>
+        <div class="status-indicator" id="connectionStatus">🟢 Connected</div>
+    </div>
+  
+    <div class="main-container">
+        <div class="simulation-panel">
+            <canvas id="trafficCanvas"></canvas>
+            <div class="canvas-overlay">
+                <div class="current-status" id="currentStatus">
+                    <div class="active-light">Active: <span id="activeSide">None</span></div>
+                    <div class="time-remaining">Time: <span id="timeRemaining">--</span>s</div>
+                    <div class="signal-phase">Phase: <span id="signalPhase">All Red</span></div>
+                    <div class="fps-display">FPS: <span id="fpsValue">--</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <div class="section">
+                <h3>🚗 Traffic Flow Controls</h3>
+                <div class="traffic-controls">
+                    <div class="direction-control north">
+                        <div class="direction-label">🔝 NORTH</div>
+                        <input type="range" id="northRate" min="0" max="100" value="25" class="traffic-slider">
+                        <div class="traffic-value"><span id="northVal">25</span> veh/min</div>
+                        <div class="queue-display">Queue: <span id="northQueue">0</span></div>
+                    </div>
+                    
+                    <div class="direction-control east">
+                        <div class="direction-label">➡️ EAST</div>
+                        <input type="range" id="eastRate" min="0" max="100" value="45" class="traffic-slider">
+                        <div class="traffic-value"><span id="eastVal">45</span> veh/min</div>
+                        <div class="queue-display">Queue: <span id="eastQueue">0</span></div>
+                    </div>
+                    
+                    <div class="direction-control south">
+                        <div class="direction-label">🔽 SOUTH</div>
+                        <input type="range" id="southRate" min="0" max="100" value="15" class="traffic-slider">
+                        <div class="traffic-value"><span id="southVal">15</span> veh/min</div>
+                        <div class="queue-display">Queue: <span id="southQueue">0</span></div>
+                    </div>
+                    
+                    <div class="direction-control west">
+                        <div class="direction-label">⬅️ WEST</div>
+                        <input type="range" id="westRate" min="0" max="100" value="35" class="traffic-slider">
+                        <div class="traffic-value"><span id="westVal">35</span> veh/min</div>
+                        <div class="queue-display">Queue: <span id="westQueue">0</span></div>
+                    </div>
+                </div>
+                
+                <div class="preset-buttons">
+                    <button id="rushBtn" class="preset-btn">🌅 Rush Hour</button>
+                    <button id="normalBtn" class="preset-btn">🌤️ Normal</button>
+                    <button id="nightBtn" class="preset-btn">🌙 Night</button>
+                    <button id="accidentBtn" class="preset-btn">🚨 Accident</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>⚙️ Simulation Controls</h3>
+                <div class="main-controls">
+                    <button id="startBtn" class="control-btn start">▶️ START</button>
+                    <button id="pauseBtn" class="control-btn pause">⏸️ PAUSE</button>
+                    <button id="resetBtn" class="control-btn reset">🔄 RESET</button>
+                </div>
+                
+                <div class="speed-control">
+                    <label>⚡ Demo Speed:</label>
+                    <input type="range" id="timeScaleSlider" min="1" max="50" value="15" class="speed-slider">
+                    <span id="timeScaleValue">15x</span>
+                </div>
+                
+                <div class="result-display">
+                    <div id="resultDisplay">Ready to start simulation</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>📊 Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item stat-vehicles">
+                        <div class="stat-label"><span class="stat-icon">🚗</span> Total Vehicles</div>
+                        <div class="stat-value stat-animate" id="totalVehicles">0</div>
+                    </div>
+                    <div class="stat-item stat-processed">
+                        <div class="stat-label"><span class="stat-icon">✅</span> Vehicles Processed</div>
+                        <div class="stat-value stat-animate" id="processedVehicles">0</div>
+                    </div>
+                    <div class="stat-item stat-moving">
+                        <div class="stat-label"><span class="stat-icon">🏎️</span> Moving Vehicles</div>
+                        <div class="stat-value stat-animate" id="movingVehicles">0</div>
+                    </div>
+                    <div class="stat-item stat-wait">
+                        <div class="stat-label"><span class="stat-icon">⏱️</span> Average Wait Time</div>
+                        <div class="stat-value stat-animate" id="avgWaitTime">0s</div>
+                    </div>
+                    <div class="stat-item stat-cycle">
+                        <div class="stat-label"><span class="stat-icon">🔄</span> Cycle Time</div>
+                        <div class="stat-value stat-animate" id="cycleTime">60s</div>
+                    </div>
+                    <div class="stat-item stat-throughput">
+                        <div class="stat-label"><span class="stat-icon">📈</span> Throughput</div>
+                        <div class="stat-value stat-animate" id="throughput">0/min</div>
+                    </div>
+                    <div class="stat-item stat-efficiency">
+                        <div class="stat-label"><span class="stat-icon">⚡</span> Efficiency</div>
+                        <div class="stat-value stat-animate" id="efficiency">100%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>🎯 AI Schedule</h3>
+                <div id="scheduleDisplay" class="schedule-display">
+                    <div class="schedule-item">No active schedule</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
